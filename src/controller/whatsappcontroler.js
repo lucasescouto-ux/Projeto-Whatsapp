@@ -269,7 +269,10 @@ class  whatsappcontroller {
 
         this.el.inputText.on("keyup", e => {
 
-        if (this.el.inputText.innerText.trim().length > 0) {
+        if (
+            this.el.inputText.innerText.trim().length > 0 ||
+            this.el.inputText.querySelectorAll("img").length > 0
+        ) {
 
             this.el.inputPlaceholder.hide();
             this.el.btnSendMicrophone.hide();
@@ -297,7 +300,19 @@ class  whatsappcontroller {
 
             emoji.on("click", e=>{
 
-                console.log(emoji.dataset.unicode);
+                let img = this.el.imgEmojiDefault.cloneNode();
+
+                img.style.cssText = emoji.style.cssText;
+                img.dataset.unicode = emoji.dataset.unicode;
+                img.alt = emoji.dataset.unicode;
+
+                emoji.classList.forEach(name=>{
+                    img.classList.add(name);
+                });
+
+                this.el.inputText.appendChild(img);
+
+                this.el.inputText.dispatchEvent(new Event("keyup"));
             });
         });
 
