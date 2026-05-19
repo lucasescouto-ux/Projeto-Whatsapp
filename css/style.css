@@ -16136,3 +16136,8 @@ html[dir=rtl] ._2ICcy:after{
 #main {
     display:none;
 }
+
+.selectable-text::selection{
+    background: #3390ff;
+    color: #fff;
+}
