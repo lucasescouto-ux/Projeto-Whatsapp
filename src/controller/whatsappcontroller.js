@@ -1,4 +1,7 @@
-class  whatsappcontroller {
+import { format } from './../utils/format';
+import { CameraController } from './cameracontroller';
+
+export default class  whatsappcontroller {
 
     constructor(){
 
@@ -205,6 +208,7 @@ class  whatsappcontroller {
 
             this.closeAllMainPanel();
             this.el.panelMessagesContainer.show();
+            this._camera.stop();
         });
 
         this.el.btnTakePicture.on("click", e=>{

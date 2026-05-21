@@ -1,0 +1,26 @@
+{
+  "name": "projeto-whatsapp",
+  "version": "1.0.0",
+  "description": "[![Hcode Treinamentos](https://www.hcode.com.br/res/img/hcode-200x100.png)](https://www.hcode.com.br)",
+  "homepage": "https://github.com/lucasescouto-ux/Projeto-Whatsapp#readme",
+  "bugs": {
+    "url": "https://github.com/lucasescouto-ux/Projeto-Whatsapp/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/lucasescouto-ux/Projeto-Whatsapp.git"
+  },
+  "license": "ISC",
+  "author": "",
+  "type": "commonjs",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "webpack --config webpack.config.js",
+    "start": "webpack-dev-server"
+  },
+  "dependencies": {
+    "webpack": "^3.1.0",
+    "webpack-dev-server": "^2.5.1"
+  }
+}
