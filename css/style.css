@@ -16141,3 +16141,14 @@ html[dir=rtl] ._2ICcy:after{
     background: #3390ff;
     color: #fff;
 }
+
+._2oKVP {
+    display: flex;
+    justify-content: center;
+}
+
+#picture-camera {
+    height: 100%;
+    width: auto;
+    text-align: center;
+}
