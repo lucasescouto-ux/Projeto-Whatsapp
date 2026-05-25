@@ -340,21 +340,21 @@ export default class  whatsappcontroller {
 
             this._microphoneController = new MicrophoneController();
 
-            this._microphoneController.on("play", musica=>{
+            this._microphoneController.on("ready", musica=>{
 
-                console.log("recebi o evento play", musica);
+                this._microphoneController.startRecorder();
             });
         });
 
         this.el.btnCancelMicrophone.on("click", e=>{
 
-            this._microphoneController.stop();
+            this._microphoneController.stopRecorder();
             this.closeRecordMicrophone();
         });
 
         this.el.btnFinishMicrophone.on("click", e=>{
 
-            this._microphoneController.stop();
+            this._microphoneController.stopRecorder();
             this.closeRecordMicrophone();
         });
 
