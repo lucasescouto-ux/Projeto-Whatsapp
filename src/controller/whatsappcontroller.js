@@ -2,6 +2,7 @@ import { format } from './../utils/format';
 import { CameraController } from './cameracontroller';
 import { MicrophoneController } from './microphonecontroller';
 import { DocumentPreviewController } from './documentpreviewcontroller';
+import { Firebase } from '../utils/firebase';
 
 export default class  whatsappcontroller {
 
@@ -13,6 +14,7 @@ export default class  whatsappcontroller {
         this.elementsPrototype();
         this.loadElements();
         this.initEvents();
+        this._firebase = new Firebase();
 
     }
 
