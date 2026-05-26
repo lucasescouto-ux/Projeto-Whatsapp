@@ -18,9 +18,13 @@ export class Firebase {
         this.init();
     }
 
-    init() {
-        if (!firebase.apps.length) {
+    init(){
+
+        if (!window._initializedFirebase) {
+
             firebase.initializeApp(this._config);
+
+            window._initializedFirebase = true;
         }
     }
 
