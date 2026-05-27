@@ -137,6 +137,26 @@ export default class  whatsappcontroller {
                     img.show();
                 }
 
+                div.on('click', e=> {
+
+                    this.el.activeName.innerHTML = contact.name;
+                    this.el.activeStatus.innerHTML = contact.status;
+
+                    if (contact.photo) {
+                        let img = div.querySelector('.photo');
+                        let defaultPhoto = div.querySelector('._3ZW2E');
+
+                        img.src = contact.photo;
+                        img.show();
+                        defaultPhoto.hide();
+                    }
+
+                    this.el.home.hide();
+                    this.el.main.css({
+                        display:'flex'
+                    });
+                });
+
                 this.el.contactsMessagesList.appendChild(div);
             });
         });
