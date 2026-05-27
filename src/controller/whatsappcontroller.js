@@ -204,7 +204,14 @@ export default class  whatsappcontroller {
 
         this.el.btnSavePanelEditProfile.on("click", e=>{
 
-            console.log(this.el.inputNamePanelEditProfile.innerHTML);
+            this.el.btnSavePanelEditProfile.disabled = true;
+
+            this._user.name = this.el.inputNamePanelEditProfile.innerHTML;
+
+            this._user.save().then(()=>{
+
+                this.el.btnSavePanelEditProfile.disabled = false;
+            });
         });
 
         this.el.formPanelAddContact.on("submit", e=>{
