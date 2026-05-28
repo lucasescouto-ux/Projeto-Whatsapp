@@ -1,29 +1,32 @@
-````md
-<h1 align="center">
- Projeto WhatsApp Clone
-</h1>
+# Projeto WhatsApp Clone
 
 <p align="center">
- Clone do WhatsApp Web desenvolvido com JavaScript, Firebase e arquitetura Client-Server.
-</p>
-
-<p align="center">
-
-<img src="https://img.shields.io/badge/Node.js-16.20.2-339933?style=for-the-badge&logo=node.js&logoColor=white"/>
-
-<img src="https://img.shields.io/badge/Express.js-Backend-000000?style=for-the-badge&logo=express&logoColor=white"/>
-
-<img src="https://img.shields.io/badge/Firebase-Realtime-orange?style=for-the-badge&logo=firebase"/>
-
-<img src="https://img.shields.io/badge/JavaScript-ES6-yellow?style=for-the-badge&logo=javascript"/>
-
-<img src="https://img.shields.io/badge/Status-Em%20Desenvolvimento-success?style=for-the-badge"/>
-
+  <img src="https://img.shields.io/badge/Node.js-16.20.2-339933?style=for-the-badge&logo=node.js&logoColor=white"/>
+  <img src="https://img.shields.io/badge/Express.js-Backend-000000?style=for-the-badge&logo=express&logoColor=white"/>
+  <img src="https://img.shields.io/badge/Firebase-Realtime-orange?style=for-the-badge&logo=firebase"/>
+  <img src="https://img.shields.io/badge/JavaScript-ES6-yellow?style=for-the-badge&logo=javascript"/>
+  <img src="https://img.shields.io/badge/Status-Em%20Desenvolvimento-success?style=for-the-badge"/>
 </p>
 
 ---
 
-## Preview do Projeto
+## Sobre o Projeto
+
+Este projeto consiste em um **clone do WhatsApp Web**, desenvolvido utilizando **JavaScript**, **Node.js**, **Express** e serviços do **Firebase**, seguindo uma arquitetura **Client-Server** moderna e escalável.
+
+A aplicação foi construída com foco em:
+
+- comunicação em tempo real;
+- renderização dinâmica de componentes;
+- upload e gerenciamento de arquivos;
+- autenticação segura;
+- integração entre Front-End e Back-End.
+
+O sistema simula funcionalidades presentes no WhatsApp Web, proporcionando uma experiência moderna e interativa.
+
+---
+
+## Preview da Aplicação
 
 <p align="center">
   <img src="./img/teste-wpp.gif" alt="Demonstração do projeto" width="1000"/>
@@ -31,77 +34,67 @@
 
 ---
 
-## Sobre o Projeto
+# Funcionalidades
 
-Aplicação desenvolvida utilizando arquitetura **Client-Server** com Node.js, integração com Firebase e renderização dinâmica de componentes.
-
-O sistema simula funcionalidades presentes no WhatsApp Web, incluindo:
-
-- autenticação;
-- envio de mensagens;
-- upload de arquivos;
-- captura de áudio;
-- comunicação em tempo real;
-- armazenamento em nuvem.
-
----
-
-## Funcionalidades
-
-✔️ Login e autenticação com Firebase  
-✔️ Envio de mensagens em tempo real  
-✔️ Upload de imagens  
-✔️ Upload de áudio  
-✔️ Compartilhamento de PDFs  
-✔️ Captura de áudio via microfone  
-✔️ Atualização dinâmica das conversas  
-✔️ Cloud Firestore  
-✔️ Firebase Storage  
-✔️ Cloud Functions  
-✔️ Interface inspirada no WhatsApp Web  
-✔️ Renderização dinâmica  
-✔️ Estrutura Client-Server  
+- ✅ Login e autenticação com Firebase Authentication  
+- ✅ Envio de mensagens em tempo real  
+- ✅ Upload de imagens  
+- ✅ Upload e reprodução de áudios  
+- ✅ Compartilhamento de arquivos PDF  
+- ✅ Captura de áudio via microfone  
+- ✅ Atualização dinâmica das conversas  
+- ✅ Integração com Cloud Firestore  
+- ✅ Firebase Storage  
+- ✅ Cloud Functions  
+- ✅ Interface inspirada no WhatsApp Web  
+- ✅ Arquitetura Client-Server  
 
 ---
 
-## Arquitetura da Aplicação
+# Arquitetura da Aplicação
 
-O projeto foi estruturado utilizando o padrão:
+A estrutura do projeto segue o padrão:
 
 ```txt
 Client → API REST → Firebase Services
-````
+```
 
-Dividido entre:
+### Divisão da Aplicação
 
-* Front-End responsável pela renderização dinâmica;
-* Back-End Node.js com Express;
-* API REST separada;
-* Firebase Authentication;
-* Cloud Firestore;
-* Firebase Storage;
-* Cloud Functions.
+### Front-End
+Responsável pela interface da aplicação e renderização dinâmica dos componentes.
 
----
+### Back-End
+API desenvolvida com Node.js e Express para gerenciamento das regras de negócio e integração com Firebase.
 
-## Tecnologias Utilizadas
+### Firebase Services
+Utilização dos serviços:
 
-| Tecnologia              | Descrição               |
-| ----------------------- | ----------------------- |
-| JavaScript              | Linguagem principal     |
-| Node.js                 | Ambiente de execução    |
-| Express.js              | Servidor Backend        |
-| Firebase Authentication | Autenticação            |
-| Cloud Firestore         | Banco de dados realtime |
-| Firebase Storage        | Upload de arquivos      |
-| Cloud Functions         | Funções serverless      |
-| Webpack                 | Build da aplicação      |
-| PDF.js                  | Visualização de PDFs    |
-| MediaDevices API        | Captura de áudio        |
+- Firebase Authentication
+- Cloud Firestore
+- Firebase Storage
+- Cloud Functions
 
 ---
 
-## 📂 Estrutura do Projeto
+# Tecnologias Utilizadas
+
+| Tecnologia | Descrição |
+|---|---|
+| JavaScript | Linguagem principal da aplicação |
+| Node.js | Ambiente de execução |
+| Express.js | Servidor Backend |
+| Firebase Authentication | Sistema de autenticação |
+| Cloud Firestore | Banco de dados em tempo real |
+| Firebase Storage | Armazenamento de arquivos |
+| Cloud Functions | Funções serverless |
+| Webpack | Build da aplicação |
+| PDF.js | Visualização de arquivos PDF |
+| MediaDevices API | Captura de áudio |
+
+---
+
+# 📂 Estrutura do Projeto
 
 ```bash
 Projeto-Whatsapp/
@@ -120,21 +113,23 @@ Projeto-Whatsapp/
 
 ---
 
-## Como Executar o Projeto
+# Como Executar o Projeto
 
 > Este projeto foi desenvolvido utilizando exclusivamente o **Node.js v16.20.2**.
 >
-> Recomenda-se utilizar exatamente esta versão para evitar incompatibilidades de dependências e erros durante a execução.
+> Recomenda-se utilizar exatamente esta versão para evitar incompatibilidades entre dependências.
 
 ---
 
-### Instale o Node.js
+## 1️⃣ Instale o Node.js
 
-🔗 https://nodejs.org/dist/v16.20.2/
+🔗 Download oficial:
+
+https://nodejs.org/dist/v16.20.2/
 
 ---
 
-### 1. Clone o repositório
+## 2️⃣ Clone o Repositório
 
 ```bash
 git clone https://github.com/lucasescouto-ux/Projeto-Whatsapp.git
@@ -142,7 +137,7 @@ git clone https://github.com/lucasescouto-ux/Projeto-Whatsapp.git
 
 ---
 
-### 2. Acesse a pasta do projeto
+## 3️⃣ Acesse a Pasta do Projeto
 
 ```bash
 cd Projeto-Whatsapp
@@ -150,7 +145,7 @@ cd Projeto-Whatsapp
 
 ---
 
-### 3. Instale as dependências
+## 4️⃣ Instale as Dependências
 
 ```bash
 npm install
@@ -158,7 +153,7 @@ npm install
 
 ---
 
-### 4. Execute o projeto
+## 5️⃣ Execute a Aplicação
 
 ```bash
 npm start
@@ -166,69 +161,58 @@ npm start
 
 ---
 
-## Configuração Firebase
+# Configuração do Firebase
 
-Para executar corretamente o projeto é necessário configurar:
+Para executar corretamente a aplicação, é necessário configurar um projeto no Firebase contendo:
 
-* Firebase Authentication
-* Cloud Firestore
-* Firebase Storage
-* Cloud Functions
+- Firebase Authentication
+- Cloud Firestore
+- Firebase Storage
+- Cloud Functions
 
-Crie um projeto no Firebase e adicione suas credenciais no arquivo de configuração da aplicação.
-
----
-
-## Scripts Disponíveis
-
-| Script         | Descrição         |
-| -------------- | ----------------- |
-| npm start      | Inicia o servidor |
-| npm run build  | Build de produção |
-| npm test       | Executa testes    |
-| npm run serve  | Emulador Firebase |
-| npm run deploy | Deploy Functions  |
-| npm run logs   | Logs das funções  |
+Após criar o projeto, adicione as credenciais da aplicação no arquivo de configuração correspondente.
 
 ---
 
-## Recursos Utilizados
+# Scripts Disponíveis
 
-| Recurso          | Link                                                                       |
-| ---------------- | -------------------------------------------------------------------------- |
-| Webpack          | https://webpack.js.org/                                                    |
-| Firebase Docs    | https://firebase.google.com/docs                                           |
-| PDF.js           | https://mozilla.github.io/pdf.js/                                          |
+| Script | Descrição |
+|---|---|
+| `npm start` | Inicia o servidor |
+| `npm run build` | Gera build de produção |
+| `npm test` | Executa os testes |
+| `npm run serve` | Inicia o emulador Firebase |
+| `npm run deploy` | Realiza deploy das Functions |
+| `npm run logs` | Exibe logs das funções |
+
+---
+
+# Recursos Utilizados
+
+| Recurso | Link |
+|---|---|
+| Webpack | https://webpack.js.org/ |
+| Firebase Docs | https://firebase.google.com/docs |
+| PDF.js | https://mozilla.github.io/pdf.js/ |
 | MediaDevices API | https://developer.mozilla.org/pt-BR/docs/Web/API/MediaDevices/getUserMedia |
 
 ---
 
-## Aprendizados
+# Aprendizados
 
 Durante o desenvolvimento deste projeto foram aprofundados conhecimentos em:
 
-* Arquitetura Client-Server;
-* Node.js;
-* Firebase;
-* Renderização dinâmica;
-* Manipulação de arquivos;
-* Upload de mídia;
-* Comunicação em tempo real;
-* Estruturação de aplicações escaláveis;
-* Integração Front-End e Back-End.
+- Arquitetura Client-Server;
+- Node.js;
+- Firebase;
+- Comunicação em tempo real;
+- Manipulação e upload de arquivos;
+- Renderização dinâmica;
+- Estruturação de aplicações escaláveis;
+- Integração entre Front-End e Back-End.
 
 ---
 
-## Status do Projeto
-
-✅ Projeto funcional
-🚀 Em constante evolução
+Projeto criado para a trilha de desenvolvimento da **Saipos**.
 
 ---
-
-## Autor
-
-Projeto desenvolvido para Trilha - Saipos
-
-```
-```
