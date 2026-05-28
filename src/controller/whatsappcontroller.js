@@ -21,6 +21,8 @@ export default class  whatsappcontroller {
         this.initEvents();
 
         this._firebase = new Firebase();
+        this._contactUserUnsubscribes = {};
+        this._contactsByEmail = {};
         this.initAuth();
 
 
@@ -35,9 +37,11 @@ export default class  whatsappcontroller {
 
             this._user.on('datachange', data => {
 
-                document.querySelector('title').innerHTML = data.name + ' - WhatsApp Clone';
+                let name = data.name || response.user.displayName || '';
 
-                this.el.inputNamePanelEditProfile.innerHTML = data.name;
+                document.querySelector('title').innerHTML = name + ' - WhatsApp Clone';
+
+                this.el.inputNamePanelEditProfile.innerHTML = name;
 
                 if (data.photo) {
                     this.el.imgPanelEditProfile.src = data.photo;
@@ -52,17 +56,27 @@ export default class  whatsappcontroller {
                     this.initContacts();
                 });
 
-                this._user.name = response.user.displayName;
-                this._user.email = response.user.email;
+                this._user.ready().then(() => {
 
-                if (response.user.photoURL) {
-                this._user.photo = response.user.photoURL;
-                }
+                    if (!this._user.name && response.user.displayName) {
+                        this._user.name = response.user.displayName;
+                    }
 
-                this._user.save().then(() => {
-                this.el.appContent.css({
-                    display: 'flex'
-                });
+                    this._user.email = response.user.email;
+
+                    if (!this._user.photo && response.user.photoURL) {
+                        this._user.photo = response.user.photoURL;
+                    }
+
+                    return this._user.save();
+                }).then(() => {
+
+                    this.el.appContent.css({
+                        display: 'flex'
+                    });
+                }).catch(err => {
+
+                    console.error(err);
             });
         })
         .catch(err=>{
@@ -73,12 +87,22 @@ export default class  whatsappcontroller {
 
     initContacts(){
 
+        if (this._contactsInitialized) return;
+
+        this._contactsInitialized = true;
+
         this._user.on('contactschange', docs =>{
 
             this.el.contactsMessagesList.innerHTML = '';
+            this._contactsByEmail = {};
+            let renderedEmails = {};
+
             docs.forEach(doc => {
 
                 let contact = doc.data();
+                renderedEmails[contact.email] = true;
+                this._contactsByEmail[contact.email] = contact;
+                this.watchContactProfile(contact);
 
                 let div = document.createElement('div');
 
@@ -109,7 +133,7 @@ export default class  whatsappcontroller {
                             <span dir="auto" title="${contact.name}" class="_1wjpf">${contact.name}</span>
                         </div>
                         <div class="_3Bxar">
-                            <span class="_3T2VG">${format.timeStampToTime(contact.lastMessageTime)}</span>
+                            <span class="_3T2VG">${contact.lastMessageTime ? format.timeStampToTime(contact.lastMessageTime) : ''}</span>
                         </div>
                     </div>
                     <div class="_1AwDx">
@@ -124,7 +148,7 @@ export default class  whatsappcontroller {
                                         </svg>
                                     </span>
                                 </div>
-                                <span dir="ltr" class="_1wjpf _3NFp9">${contact.lastMessage}</span>
+                                <span dir="ltr" class="_1wjpf _3NFp9">${contact.lastMessage || ''}</span>
                                 <div class="_3Bxar">
                                     <span>
                                         <div class="_15G96">
@@ -153,9 +177,87 @@ export default class  whatsappcontroller {
 
                 this.el.contactsMessagesList.appendChild(div);
             });
+
+            Object.keys(this._contactUserUnsubscribes).forEach(email => {
+
+                if (!renderedEmails[email]) {
+                    this._contactUserUnsubscribes[email]();
+                    delete this._contactUserUnsubscribes[email];
+                }
+            });
         });
          
         this._user.getContacts();
+    }
+
+    watchContactProfile(contact) {
+
+        if (!contact || !contact.email || this._contactUserUnsubscribes[contact.email]) return;
+
+        this._contactUserUnsubscribes[contact.email] = User.findbyEmail(contact.email).onSnapshot(doc => {
+
+            if (!doc.exists) return;
+
+            let profile = doc.data();
+            let currentContact = this._contactsByEmail[contact.email] || contact;
+            let updates = {};
+
+            ['name', 'photo', 'status'].forEach(field => {
+
+                if (profile[field] !== undefined && profile[field] !== currentContact[field]) {
+                    updates[field] = profile[field];
+                }
+            });
+
+            if (!Object.keys(updates).length) return;
+
+            Object.assign(currentContact, updates);
+            this._contactsByEmail[contact.email] = currentContact;
+            this.updateRenderedContactProfile(currentContact);
+
+            this._user.updateContact(contact.email, updates)
+                .catch(err => console.error(err));
+        });
+    }
+
+    updateRenderedContactProfile(contact) {
+
+        let item = this.el.contactsMessagesList.querySelector(
+            `.contact-item[data-email="${contact.email}"]`
+        );
+
+        if (item) {
+            let name = item.querySelector('._25Ooe ._1wjpf');
+            let photo = item.querySelector('.photo');
+
+            if (name) {
+                name.innerHTML = contact.name || '';
+                name.title = contact.name || '';
+            }
+
+            if (photo) {
+                if (contact.photo) {
+                    photo.src = contact.photo;
+                    photo.show();
+                } else {
+                    photo.src = '#';
+                    photo.hide();
+                }
+            }
+        }
+
+        if (this._contactActive && this._contactActive.email === contact.email) {
+            Object.assign(this._contactActive, contact);
+            this.el.activeName.innerHTML = contact.name || '';
+            this.el.activeStatus.innerHTML = contact.status || '';
+
+            if (contact.photo) {
+                this.el.activePhoto.src = contact.photo;
+                this.el.activePhoto.show();
+            } else {
+                this.el.activePhoto.hide();
+            }
+        }
     }
 
     setActiveChat(contact) {
@@ -166,6 +268,7 @@ export default class  whatsappcontroller {
             }
 
             this._contactActive = contact;
+            this._forceScrollMessagesToBottom = true;
 
             this.el.activeName.innerHTML = contact.name;
             this.el.activeStatus.innerHTML = contact.status || '';
@@ -194,11 +297,7 @@ export default class  whatsappcontroller {
             }
 
             let scrollTop = this.el.panelMessagesContainer.scrollTop;
-            let scrollTopMax =
-                this.el.panelMessagesContainer.scrollHeight -
-                this.el.panelMessagesContainer.offsetHeight;
-
-            let autoScroll = scrollTop >= scrollTopMax;
+            let autoScroll = this._forceScrollMessagesToBottom || this.isMessagesNearBottom();
 
             this.el.panelMessagesContainer.innerHTML = '';
 
@@ -251,16 +350,29 @@ export default class  whatsappcontroller {
 
                 }
 
+                if (message.type === 'image') {
+
+                    let image = view.querySelector('.message-photo');
+
+                    if (image) {
+                        image.title = 'Abrir imagem';
+                        image.addEventListener('click', e => {
+                            e.preventDefault();
+                            this.openImageViewer(message.content);
+                        });
+                    }
+                }
+
                     this.el.panelMessagesContainer.appendChild(view);
                 });
 
                 if (autoScroll) {
-                    this.el.panelMessagesContainer.scrollTop =
-                        this.el.panelMessagesContainer.scrollHeight -
-                        this.el.panelMessagesContainer.offsetHeight;
+                    this.scrollMessagesToBottom();
                 } else {
                     this.el.panelMessagesContainer.scrollTop = scrollTop;
                 }
+
+                this._forceScrollMessagesToBottom = false;
             });
     }
 
@@ -353,6 +465,176 @@ export default class  whatsappcontroller {
 
             return json;
         }
+    }
+
+    isMessagesNearBottom(distance = 120) {
+
+        let container = this.el.panelMessagesContainer;
+        let scrollTopMax = container.scrollHeight - container.offsetHeight;
+
+        return scrollTopMax <= 0 || container.scrollTop >= scrollTopMax - distance;
+    }
+
+    scrollMessagesToBottom() {
+
+        let container = this.el.panelMessagesContainer;
+        let scroll = () => {
+            container.scrollTop = Math.max(container.scrollHeight - container.offsetHeight, 0);
+        };
+
+        scroll();
+
+        if (window.requestAnimationFrame) {
+            window.requestAnimationFrame(scroll);
+        } else {
+            setTimeout(scroll, 0);
+        }
+    }
+
+    getLastMessagePreview(type, data = {}) {
+
+        switch (type) {
+
+            case 'image':
+                return data.count && data.count > 1 ? `${data.count} fotos` : 'Foto';
+
+            case 'document':
+                let fileLabel = Message.getFileTypeLabel(data.fileType);
+                let filename = data.filename || 'Documento';
+
+                if (!fileLabel && filename.indexOf('.') > -1) {
+                    fileLabel = filename.split('.').pop().toUpperCase();
+                }
+
+                return fileLabel ? `${fileLabel}: ${filename}` : filename;
+
+            case 'audio':
+                return 'Audio';
+
+            case 'contact':
+                return data.name ? `Contato: ${data.name}` : 'Contato';
+
+            default:
+                return data.text || '';
+        }
+    }
+
+    updateLastMessageFromType(contact, type, data = {}) {
+
+        this.updateLastMessage(contact, this.getLastMessagePreview(type, data));
+    }
+
+    updateLastMessage(contact, text) {
+        let now = new Date();
+
+        if (!contact || !contact.email) return;
+
+        this._user.updateContact(contact.email, {
+            lastMessage: text,
+            lastMessageTime: now
+        }).catch(err => console.error(err));
+
+        User.getContactsRef(contact.email)
+            .doc(btoa(this._user.email))
+            .set({
+            lastMessage: text,
+            lastMessageTime: now
+            }, { merge: true })
+            .catch(err => console.error(err));
+    }
+
+    openAttachmentPreviewPanel() {
+
+        this.closeAllMainPanel();
+        this.el.panelDocumentPreview.addClass("open");
+        this.el.panelDocumentPreview.css({
+            "height": "calc(100% - 120px)"
+        });
+    }
+
+    resetAttachmentPreview(clearInputs = true) {
+
+        if (clearInputs) {
+            this.el.inputPhoto.value = '';
+            this.el.inputDocument.value = '';
+        }
+
+        this._mediaPreviewMode = null;
+        this._imagePreviewFiles = [];
+        this._documentPreviewController = null;
+        this.el.imgPanelDocumentPreview.src = '#';
+        this.el.infoPanelDocumentPreview.innerHTML = '';
+        this.el.filenamePanelDocumentPreview.innerHTML = '';
+        this.el.iconPanelDocumentPreview.className = 'jcxhw icon-doc-generic';
+        this.el.imagePanelDocumentPreview.hide();
+        this.el.filePanelDocumentPreview.hide();
+    }
+
+    prepareAttachmentInput(input) {
+
+        this.closeAllMainPanel();
+        this.el.panelMessagesContainer.show();
+        this.resetAttachmentPreview();
+        input.click();
+    }
+
+    openImageViewer(src) {
+
+        let viewer = this.getImageViewer();
+        let image = viewer.querySelector('.media-image-viewer-image');
+
+        image.src = src;
+        viewer.addClass('open');
+    }
+
+    closeImageViewer() {
+
+        if (!this._imageViewer) return;
+
+        this._imageViewer.removeClass('open');
+        this._imageViewer.querySelector('.media-image-viewer-image').src = '#';
+    }
+
+    getImageViewer() {
+
+        if (this._imageViewer) return this._imageViewer;
+
+        let viewer = document.createElement('div');
+        viewer.className = 'media-image-viewer';
+        viewer.innerHTML = `
+            <div class="media-image-viewer-toolbar">
+                <button class="media-image-viewer-close" title="Fechar">
+                    <span data-icon="x-light">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="28" height="28">
+                            <path fill="#FFF" d="M19.058 17.236l-5.293-5.293 5.293-5.293-1.764-1.764L12 10.178 6.707 4.885 4.942 6.649l5.293 5.293-5.293 5.293L6.707 19 12 13.707 17.293 19l1.765-1.764z"></path>
+                        </svg>
+                    </span>
+                </button>
+            </div>
+            <div class="media-image-viewer-stage">
+                <img src="#" class="media-image-viewer-image">
+            </div>
+        `;
+
+        viewer.querySelector('.media-image-viewer-close').addEventListener('click', e => {
+            e.preventDefault();
+            this.closeImageViewer();
+        });
+
+        viewer.addEventListener('click', e => {
+            if (e.target === viewer || e.target.hasClass && e.target.hasClass('media-image-viewer-stage')) {
+                this.closeImageViewer();
+            }
+        });
+
+        document.addEventListener('keydown', e => {
+            if (e.key === 'Escape') this.closeImageViewer();
+        });
+
+        document.body.appendChild(viewer);
+        this._imageViewer = viewer;
+
+        return viewer;
     }
 
     initEvents(){
@@ -454,9 +736,9 @@ export default class  whatsappcontroller {
 
             let contact = new User(formData.get('email'));
 
-            contact.on('datachange', data=>{
+            contact.ready().then(() => {
 
-                if(data.name){
+                if(contact.name){
 
                         Chat.createIfNotExists(this._user.email, contact.email).then(chat =>{
 
@@ -478,7 +760,7 @@ export default class  whatsappcontroller {
 
                     console.error('Usuário não foi encontrado.');
                 }
-            });
+            }).catch(err => console.error(err));
         });
 
         this.el.contactsMessagesList.querySelectorAll(".contact-item").forEach(item=>{
@@ -501,23 +783,22 @@ export default class  whatsappcontroller {
 
         this.el.btnAttachPhoto.on("click", e=>{
 
-            this.el.inputPhoto.click();
+            this.prepareAttachmentInput(this.el.inputPhoto);
         });
 
         this.el.inputPhoto.on("change", e=>{
 
             let files = [...this.el.inputPhoto.files];
 
-            if (!files.length) return;
+            if (!files.length) {
+                this.resetAttachmentPreview();
+                return;
+            }
 
+            this.resetAttachmentPreview(false);
             this._mediaPreviewMode = 'image';
             this._imagePreviewFiles = files;
-
-            this.closeAllMainPanel();
-            this.el.panelDocumentPreview.addClass("open");
-            this.el.panelDocumentPreview.css({
-                "height":"calc(100% - 120px)"
-            });
+            this.openAttachmentPreviewPanel();
 
             this._documentPreviewController = new DocumentPreviewController(files[0]);
 
@@ -624,6 +905,8 @@ export default class  whatsappcontroller {
                 })
                 .then(() => {
 
+                    this.updateLastMessageFromType(this._contactActive, 'image');
+
                     this.el.btnSendPicture.disabled = false;
 
                     this.closeAllMainPanel();
@@ -647,13 +930,7 @@ export default class  whatsappcontroller {
 
         this.el.btnAttachDocument.on("click", e=>{
 
-            this.closeAllMainPanel();
-            this.el.panelDocumentPreview.addClass("open");
-            this.el.panelDocumentPreview.css({
-                "height":"calc(100% - 120px)"
-            });
-
-            this.el.inputDocument.click();
+            this.prepareAttachmentInput(this.el.inputDocument);
         });
 
         this.el.inputDocument.on("change", e => {
@@ -661,6 +938,9 @@ export default class  whatsappcontroller {
             if (this.el.inputDocument.files.length) {
 
                 let file = this.el.inputDocument.files[0];
+
+                this.resetAttachmentPreview(false);
+                this.openAttachmentPreviewPanel();
 
                 if (file.type.startsWith('image/')) {
                     this._mediaPreviewMode = 'image';
@@ -736,6 +1016,8 @@ export default class  whatsappcontroller {
                     this.el.imagePanelDocumentPreview.hide();
                     this.el.filePanelDocumentPreview.show();
                 });
+            } else {
+                this.resetAttachmentPreview();
             }
         });
 
@@ -743,10 +1025,7 @@ export default class  whatsappcontroller {
 
             this.closeAllMainPanel();
             this.el.panelMessagesContainer.show();
-            this.el.inputPhoto.value = '';
-            this.el.inputDocument.value = '';
-            this._mediaPreviewMode = null;
-            this._imagePreviewFiles = [];
+            this.resetAttachmentPreview();
 
         });
 
@@ -761,6 +1040,9 @@ export default class  whatsappcontroller {
                 Promise.all(files.map(file => {
                     return Message.sendImage(this._contactActive.chatId, this._user.email, file);
                 })).then(() => {
+                    this.updateLastMessageFromType(this._contactActive, 'image', {
+                        count: files.length
+                    });
                     this.el.btnClosePanelDocumentPreview.click();
                 }).catch(err => this.showMediaSendError(err));
                 return;
@@ -790,7 +1072,12 @@ export default class  whatsappcontroller {
                 sendPromise = sendDocument();
             }
 
-            sendPromise.catch(err => this.showMediaSendError(err));
+            sendPromise.then(() => {
+                this.updateLastMessageFromType(this._contactActive, 'document', {
+                    filename: file.name,
+                    fileType: file.type
+                });
+            }).catch(err => this.showMediaSendError(err));
             this.el.inputDocument.value = '';
             this.el.btnClosePanelDocumentPreview.click();
 
@@ -806,7 +1093,9 @@ export default class  whatsappcontroller {
                     this._contactActive.chatId,
                     this._user.email,
                     contact
-                );
+                ).then(() => {
+                    this.updateLastMessageFromType(this._contactActive, 'contact', contact);
+                }).catch(err => this.showMediaSendError(err));
             });
 
             this._contactsController.open();
@@ -868,7 +1157,9 @@ export default class  whatsappcontroller {
                     file,
                     metadata,
                     this._user.photo
-                ).catch(err => this.showMediaSendError(err));
+                ).then(() => {
+                    this.updateLastMessageFromType(this._contactActive, 'audio');
+                }).catch(err => this.showMediaSendError(err));
 
                 this.closeRecordMicrophone();
 
@@ -906,17 +1197,31 @@ export default class  whatsappcontroller {
             }
         });
 
-        this.el.btnSend.on("click", e=>{
+        this.el.btnSend.on("click", e => {
+
+            let text = this.el.inputText.innerHTML.trim();
+
+            if (!text) return;
 
             Message.send(
-                this._contactActive.chatId, 
+                this._contactActive.chatId,
                 this._user.email,
-                'text',
-                this.el.inputText.innerHTML
-            );
-
-            this.el.inputText.innerText = '';
-            this.el.panelEmojis.removeClass('open');
+                "text",
+                text
+            )
+            .then(() => {
+                this.updateLastMessage(this._contactActive, text);
+            })
+            .then(() => {
+                this.el.inputText.innerHTML = "";
+                this.el.panelEmojis.removeClass("open");
+                this.el.inputPlaceholder.show();
+                this.el.btnSend.hide();
+                this.el.btnSendMicrophone.show();
+            })
+            .catch(err => {
+                console.error("Erro ao enviar mensagem:", err);
+            });
 
         });
 

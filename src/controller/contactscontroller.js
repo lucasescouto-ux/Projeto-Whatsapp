@@ -1,4 +1,4 @@
-import { ClassEvent } from "../utils/ClassEvent";
+import { ClassEvent } from "../utils/classevent";
 
 export class ContactsController extends ClassEvent {
 

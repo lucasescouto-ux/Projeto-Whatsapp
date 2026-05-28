@@ -60,7 +60,7 @@
 /******/ 	__webpack_require__.p = "dist";
 /******/
 /******/ 	// Load entry module and return exports
-/******/ 	return __webpack_require__(__webpack_require__.s = 37);
+/******/ 	return __webpack_require__(__webpack_require__.s = 41);
 /******/ })
 /************************************************************************/
 /******/ ({
@@ -256,7 +256,7 @@ process.umask = function() { return 0; };
 
 /***/ }),
 
-/***/ 37:
+/***/ 41:
 /***/ (function(module, exports, __webpack_require__) {
 
 /* Copyright 2020 Mozilla Foundation
@@ -277,12 +277,12 @@ process.umask = function() { return 0; };
 (typeof window !== "undefined"
   ? window
   : {}
-).pdfjsWorker = __webpack_require__(38);
+).pdfjsWorker = __webpack_require__(42);
 
 
 /***/ }),
 
-/***/ 38:
+/***/ 42:
 /***/ (function(module, exports, __webpack_require__) {
 
 /* WEBPACK VAR INJECTION */(function(process) {/**

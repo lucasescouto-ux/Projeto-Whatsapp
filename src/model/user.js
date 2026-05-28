@@ -9,7 +9,7 @@ export class User extends Model {
 
         this._data = {};
 
-        if (id) this.getById(id);
+        this._loadPromise = id ? this.getById(id) : Promise.resolve();
     }
 
     get name(){ return this._data.name; }
@@ -24,13 +24,22 @@ export class User extends Model {
     get chatId(){ return this._data.chatId; }
     set chatId(value){ this._data.chatId = value; }
 
+    ready(){
+
+        return this._loadPromise;
+    }
+
     getById(id){
 
         return new Promise((s, f)=>{
 
             User.findbyEmail(id).onSnapshot(doc=>{
 
-                this.fromJSON(doc.data());
+                let data = doc.exists ? doc.data() : {};
+
+                data.email = data.email || id;
+
+                this.fromJSON(data);
 
                     s(doc);
             });
@@ -88,5 +97,11 @@ export class User extends Model {
            });
         });
 
+    }
+
+    updateContact(email, data) {
+        return User.getContactsRef(this.email)
+            .doc(btoa(email))
+            .set(data, { merge: true });
     }
 }
