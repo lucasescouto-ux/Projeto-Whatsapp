@@ -1,6 +1,7 @@
 import { Model } from "./model"
 import { Firebase } from "../utils/firebase";
 import { format } from "../utils/format";
+import { Base64 } from "../utils/base64";
 
 export class Message extends Model {
 
@@ -23,10 +24,41 @@ export class Message extends Model {
     get status() {return this._data.status; }
     set status(value) {return this._data.status = value; }
 
+    get preview() {return this._data.preview; }
+    set preview(value) {return this._data.preview = value; }
+
+    get info() {return this._data.info; }
+    set info(value) {return this._data.info = value; }
+
+    get from() {return this._data.from; }
+    set from(value) {return this._data.from = value; }
+
+    get size() {return this._data.size; }
+    set size(value) {return this._data.size = value; }
+
+    get filename() {return this._data.filename; }
+    set filename(value) {return this._data.filename = value; }
+
+    get fileType() {return this._data.fileType; }
+    set fileType(value) {return this._data.fileType = value; }
+
+    get previewStyle() {
+        return this.preview ? `background-image: url(${this.preview})` : '';
+    }
+
+    get fileTypeLabel() {
+        return Message.getFileTypeLabel(this.fileType);
+    }
+
+    get fileSizeLabel() {
+        return Message.formatFileSize(this.size);
+    }
+
     getViewElemente(me = true){
 
         let div = document.createElement('div');
 
+        div.id = `${this.id}`;
         div.className = 'message';
 
         switch(this.type){
@@ -54,7 +86,7 @@ export class Message extends Model {
                                                 </div>
                                             </div>
                                             <div class="_1lC8v">
-                                                <div dir="ltr" class="_3gkvk selectable-text invisible-space copyable-text">Nome do Contato Anexado</div>
+                                                <div dir="ltr" class="_3gkvk selectable-text invisible-space copyable-text">${this.content.name}</div>
                                             </div>
                                             <div class="_3a5-b">
                                                 <div class="_1DZAH" role="button">
@@ -69,11 +101,23 @@ export class Message extends Model {
 
                                 </div>
                     `;
+
+                    if (this.content.photo){
+                        let img = div.querySelector('.photo-contact-sended');
+                        img.src = this.content.photo;
+                        img.show();
+                    }
+
+                    div.querySelector('.btn-message-send').on('click', e=>{
+
+                        console.log('Enviar mensagem');
+                    });
+
                 break;
                     
             case 'image':
                     div.innerHTML = `
-                        <div class="_3_7SH _3qMSo">
+                        <div class="_3_7SH _3qMSo" id="${this.id}">
                             <div class="KYpDv">
                                 <div>
                                     <div class="_3v3PK" style="width: 330px; height: 330px;">
@@ -116,7 +160,7 @@ export class Message extends Model {
 
                 div.querySelector('.message-photo').on('load', e=>{
 
-                    div.querySelector('.message-photo').shadowRoot();
+                    div.querySelector('.message-photo').show();
                     div.querySelector('._34Olu').hide();
                     div.querySelector('._3v3PK').css({
                         height:'auto'
@@ -127,16 +171,16 @@ export class Message extends Model {
 
             case 'document':
                     div.innerHTML = `
-                            <div class="_3_7SH _1ZPgd">
+                            <div class="_3_7SH _1ZPgd" id="${this.id}">
                                 <div class="_1fnMt _2CORf">
-                                    <a class="_1vKRe" href="#">
-                                        <div class="_2jTyA" style="background-image: url()"></div>
+                                    <a class="_1vKRe" href="${this.content || '#'}" target="_blank" download="${this.filename || ''}">
+                                        <div class="_2jTyA" style="${this.previewStyle}"></div>
                                         <div class="_12xX7">
                                             <div class="_3eW69">
                                                 <div class="JdzFp message-file-icon icon-doc-pdf"></div>
                                             </div>
                                             <div class="nxILt">
-                                                <span dir="auto" class="message-filename">Arquivo.pdf</span>
+                                                <span dir="auto" class="message-filename">${this.filename || 'Documento'}</span>
                                             </div>
                                             <div class="_17viz">
                                                 <span data-icon="audio-download" class="message-file-download">
@@ -154,9 +198,9 @@ export class Message extends Model {
                                         </div>
                                     </a>
                                     <div class="_3cMIj">
-                                        <span class="PyPig message-file-info">32 páginas</span>
-                                        <span class="PyPig message-file-type">PDF</span>
-                                        <span class="PyPig message-file-size">4 MB</span>
+                                        <span class="PyPig message-file-info">${this.info || ''}</span>
+                                        <span class="PyPig message-file-type">${this.fileTypeLabel}</span>
+                                        <span class="PyPig message-file-size">${this.fileSizeLabel}</span>
                                     </div>
                                     <div class="_3Lj_s">
                                         <div class="_1DZAH" role="button">
@@ -250,7 +294,7 @@ export class Message extends Model {
 
             default:
                 div.innerHTML = `
-                            <div class="font-style _3DFk6 tail" id="${this.id}">
+                            <div class="font-style _3DFk6 tail">
                                 <span class="tail-container"></span>
                                 <span class="tail-container highlight"></span>
                                 <div class="Tkt2p">
@@ -282,34 +326,108 @@ export class Message extends Model {
         return div;
     }
 
-    static sendImage(chatId, from, file){
+    static formatFileSize(bytes) {
+        if (bytes === undefined || bytes === null || bytes === '') return '';
 
-        return new Promise((s, f)=>{
+        let size = Number(bytes);
 
-            let uploadTask = Firebase.hd().ref(from).child(Date.now() + '_' + file.name).put(file);
+        if (Number.isNaN(size)) return '';
 
-            uploadTask.on('stage_changed', e => {
+        let units = ['B', 'KB', 'MB', 'GB'];
+        let unitIndex = 0;
 
-                console.info('upload', e);
-            }, err => {
+        while (size >= 1024 && unitIndex < units.length - 1) {
+            size = size / 1024;
+            unitIndex++;
+        }
 
-                console.error(err);
-            }, () => {
+        let precision = unitIndex > 0 && size < 10 ? 1 : 0;
 
-                Message.send(
-                    chatId, 
-                    from,
-                    'image', 
-                    uploadTask.snapshot.downloadURL).then(()=>{
+        return `${size.toFixed(precision)} ${units[unitIndex]}`;
+    }
 
-                    s();
+    static getFileTypeLabel(fileType) {
+        if (!fileType) return '';
+
+        let labels = {
+            'application/pdf': 'PDF',
+            'application/msword': 'DOC',
+            'application/vnd.openxmlformats-officedocument.wordprocessingml.document': 'DOCX',
+            'application/vnd.ms-excel': 'XLS',
+            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': 'XLSX',
+            'application/vnd.ms-powerpoint': 'PPT',
+            'application/vnd.openxmlformats-officedocument.presentationml.presentation': 'PPTX'
+        };
+
+        if (labels[fileType]) return labels[fileType];
+
+        let parts = fileType.split('/');
+        return (parts[1] || fileType).toUpperCase();
+    }
+
+    static assertEmbeddedPayloadFits(data) {
+        let size = JSON.stringify(data).length;
+        let maxSize = 850000;
+
+        if (size > maxSize) {
+            return Promise.reject(new Error('Arquivo muito grande para enviar sem Storage. Use um arquivo menor que 600 KB.'));
+        }
+
+        return Promise.resolve(data);
+    }
+
+    static sendContact(chatId, from, contact){
+
+        return Message.send(chatId, from, 'contact', contact);
+    }
+
+    static sendDocument(chatId, from, file, filePreview = null, info = '') {
+        return Base64.toDataURL(file).then(fileDataURL => {
+            let previewDataURL = filePreview ? Base64.toDataURL(filePreview) : Promise.resolve('');
+
+            return previewDataURL.then(preview => {
+                let data = {
+                    filename: file.name,
+                    size: file.size,
+                    fileType: file.type,
+                    info
+                };
+
+                if (preview) {
+                    data.preview = preview;
+                }
+
+                return Message.assertEmbeddedPayloadFits(Object.assign({
+                    content: fileDataURL,
+                    timeStamp: new Date(),
+                    status: 'wait',
+                    type: 'document',
+                    from
+                }, data)).then(() => {
+                    return Message.send(chatId, from, 'document', fileDataURL, data);
                 });
             });
         });
-
     }
 
-    static send(chatId, from, type, content) {
+
+    static sendImage(chatId, from, file) {
+        return new Promise((s, f) => {
+            Base64.imageToDataURL(file)
+                .then(dataURL => Message.assertEmbeddedPayloadFits({
+                    content: dataURL,
+                    timeStamp: new Date(),
+                    status: 'wait',
+                    type: 'image',
+                    from
+                }).then(() => dataURL))
+                .then(dataURL => Message.send(chatId, from, 'image', dataURL))
+                .then(s)
+                .catch(f);
+        });
+    }
+
+    static send(chatId, from, type, content, data = {}) {
 
         if (!chatId) {
             console.error('chatId inválido:', chatId);
@@ -318,24 +436,27 @@ export class Message extends Model {
 
         return new Promise((s, f)=>{
 
-            Message.getRef(chatId).add({
+            Message.getRef(chatId).add(Object.assign({
                 content,
                 timeStamp: new Date(),
                 status: 'wait',
                 type,
                 from
-            }).then(result=>{
+            }, data)).then(result=>{
                 
-                result.parent.doc(result.id).set({
-
+                let docRef = result.parent.doc(result.id);
+                
+                docRef.set({
                     status: 'sent'
+
                 }, {
                     merge:true
-                }).then(()=>{
 
-                    s();
-                });
-            });
+                }).then(()=>{
+                    s(docRef);
+
+                }).catch(f);
+            }).catch(f);
         });
     }
 

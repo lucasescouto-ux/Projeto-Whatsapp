@@ -1,6 +1,5 @@
 const firebase = require("firebase/app");
 require("firebase/firestore");
-require("firebase/storage");
 require("firebase/auth");
 
 export class Firebase {
@@ -9,7 +8,6 @@ export class Firebase {
             apiKey: "AIzaSyD--yKs3F53VYSkI2I9oRhYCAaqWjM0F1Q",
             authDomain: "whatsapp-clone-78124.firebaseapp.com",
             projectId: "whatsapp-clone-78124",
-            storageBucket: "whatsapp-clone-78124.firebasestorage.app",
             messagingSenderId: "589551792845",
             appId: "1:589551792845:web:ea5dc143257f4b40e12f84",
             measurementId: "G-H5GQJCDPH6"
@@ -30,10 +28,6 @@ export class Firebase {
 
     static db() {
         return firebase.firestore();
-    }
-
-    static hd() {
-        return firebase.storage();
     }
 
     initAuth() {

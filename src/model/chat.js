@@ -1,6 +1,5 @@
 import { Model } from './model'
 import { Firebase } from '../utils/firebase'
-import firebase from 'firebase';
 
 
 export class Chat extends Model {

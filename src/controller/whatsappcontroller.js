@@ -5,7 +5,9 @@ import { DocumentPreviewController } from './documentpreviewcontroller';
 import { Firebase } from '../utils/firebase';
 import { User } from '../model/user';
 import { Chat } from '../model/chat';
-import { Message } from '../model/message';
+import { Message } from '../model/message'
+import { Base64 } from '../utils/base64';
+import { ContactsController } from './contactscontroller';
 
 export default class  whatsappcontroller {
 
@@ -197,6 +199,8 @@ export default class  whatsappcontroller {
             docs.forEach(doc => {
                 let data = doc.data();
                 data.id = doc.id;
+
+                if (data.type === 'document' && !data.content) return;
 
                 let message = new Message();
                 message.fromJSON(data);
@@ -459,10 +463,29 @@ export default class  whatsappcontroller {
 
         this.el.inputPhoto.on("change", e=>{
 
-            [...this.el.inputPhoto.files].forEach(file=>{
+            let files = [...this.el.inputPhoto.files];
 
-                Message.sendImage(this._contactActive.chatId, this._user.email, file);
+            if (!files.length) return;
+
+            this._mediaPreviewMode = 'image';
+            this._imagePreviewFiles = files;
+
+            this.closeAllMainPanel();
+            this.el.panelDocumentPreview.addClass("open");
+            this.el.panelDocumentPreview.css({
+                "height":"calc(100% - 120px)"
             });
+
+            this._documentPreviewController = new DocumentPreviewController(files[0]);
+
+            this._documentPreviewController.getPreviewData().then(result => {
+
+                this.el.imgPanelDocumentPreview.src = result.src;
+                this.el.infoPanelDocumentPreview.innerHTML = files.length > 1 ? `${files.length} imagens selecionadas` : files[0].name;
+                this.el.imagePanelDocumentPreview.show();
+                this.el.filePanelDocumentPreview.hide();
+
+            }).catch(err => this.showMediaSendError(err));
         });
 
         this.el.btnAttachCamera.on("click", e=>{
@@ -550,11 +573,13 @@ export default class  whatsappcontroller {
                 })
                 .then(file => {
 
-                    Message.sendImage(
+                    return Message.sendImage(
                         this._contactActive.chatId,
                         this._user.email,
                         file
                     );
+                })
+                .then(() => {
 
                     this.el.btnSendPicture.disabled = false;
 
@@ -566,6 +591,11 @@ export default class  whatsappcontroller {
                     this.el.containerSendPicture.hide();
                     this.el.containerTakePicture.show();
                     this.el.panelMessagesContainer.show();
+
+                }).catch(err => {
+
+                    this.el.btnSendPicture.disabled = false;
+                    this.showMediaSendError(err);
 
                 });
             }
@@ -587,7 +617,9 @@ export default class  whatsappcontroller {
 
             if (this.el.inputDocument.files.length) {
 
-                this.el.panelCamera.css({
+                this._mediaPreviewMode = 'document';
+
+                this.el.panelDocumentPreview.css({
                     "height":"1%"
                 });
 
@@ -602,13 +634,13 @@ export default class  whatsappcontroller {
                     this.el.imagePanelDocumentPreview.show();
                     this.el.filePanelDocumentPreview.hide();
 
-                    this.el.panelCamera.css({
+                    this.el.panelDocumentPreview.css({
                         "height":"calc(100% - 120px)"
                     });
 
                 }).catch(err => {
 
-                this.el.panelCamera.css({
+                this.el.panelDocumentPreview.css({
                     "height":"calc(100% - 120px)"
                 });
 
@@ -647,22 +679,78 @@ export default class  whatsappcontroller {
 
             this.closeAllMainPanel();
             this.el.panelMessagesContainer.show();
+            this.el.inputPhoto.value = '';
+            this.el.inputDocument.value = '';
+            this._mediaPreviewMode = null;
+            this._imagePreviewFiles = [];
 
         });
 
-        this.el.btnSendDocument.on("click", e=>{
+        this.el.btnSendDocument.on('click', e => {
 
-            console.log("Enviar documento")
+            if (this._mediaPreviewMode === 'image') {
+
+                let files = this._imagePreviewFiles || [];
+
+                if (!files.length) return;
+
+                Promise.all(files.map(file => {
+                    return Message.sendImage(this._contactActive.chatId, this._user.email, file);
+                })).then(() => {
+                    this.el.btnClosePanelDocumentPreview.click();
+                }).catch(err => this.showMediaSendError(err));
+                return;
+            }
+
+            let file = this.el.inputDocument.files[0];
+
+            if (!file) return;
+
+            let base64 = this.el.imgPanelDocumentPreview.src;
+            let hasPreview = base64 && base64.indexOf('data:') === 0;
+            let info = file.type === 'application/pdf' ? this.el.infoPanelDocumentPreview.innerHTML : '';
+            let sendDocument = (filePreview = null) => {
+                return Message.sendDocument(
+                    this._contactActive.chatId,
+                    this._user.email,
+                    file,
+                    filePreview,
+                    info
+                );
+            };
+            let sendPromise;
+
+            if (file.type === 'application/pdf' && hasPreview) {
+                sendPromise = sendDocument(base64);
+            } else {
+                sendPromise = sendDocument();
+            }
+
+            sendPromise.catch(err => this.showMediaSendError(err));
+            this.el.inputDocument.value = '';
+            this.el.btnClosePanelDocumentPreview.click();
+
         });
 
         this.el.btnAttachContact.on("click", e=>{
 
-            this.el.modalContacts.show();
+            this._contactsController = new ContactsController(this.el.modalContacts, this._user);
+
+            this._contactsController.on('select', contact => {
+
+                Message.sendContact(
+                    this._contactActive.chatId,
+                    this._user.email,
+                    contact
+                );
+            });
+
+            this._contactsController.open();
         });
 
         this.el.btnCloseModalContacts.on("click", e=>{
 
-            this.el.modalContacts.hide();
+            this._contactsController.close();
         });
 
         this.el.btnSendMicrophone.on("click", e=>{
@@ -792,6 +880,12 @@ export default class  whatsappcontroller {
 
         this.el.recordMicrophone.hide();
         this.el.btnSendMicrophone.show();
+    }
+
+    showMediaSendError(err){
+
+        console.error('Erro ao enviar midia:', err);
+        alert(err.message || 'Nao foi possivel enviar a midia.');
     }
 
     closeAllMainPanel(){
