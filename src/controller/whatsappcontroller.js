@@ -5,6 +5,7 @@ import { DocumentPreviewController } from './documentpreviewcontroller';
 import { Firebase } from '../utils/firebase';
 import { User } from '../model/user';
 import { Chat } from '../model/chat';
+import { Message } from '../model/message';
 
 export default class  whatsappcontroller {
 
@@ -141,8 +142,22 @@ export default class  whatsappcontroller {
                 div.on('click', e=> {
 
                     console.log(contact.chatId);
+                    this.setActiveChat(contact);
 
-                    this.el.activeName.innerHTML = contact.name;
+                });
+
+                this.el.contactsMessagesList.appendChild(div);
+            });
+        });
+         
+        this._user.getContacts();
+    }
+
+    setActiveChat(contact){
+
+        this._contactActive = contact;
+
+        this.el.activeName.innerHTML = contact.name;
                     this.el.activeStatus.innerHTML = contact.status || '';
 
                     if(contact.photo){
@@ -161,14 +176,6 @@ export default class  whatsappcontroller {
                     this.el.main.css({
                         display:'flex'
                     });
-
-                });
-
-                this.el.contactsMessagesList.appendChild(div);
-            });
-        });
-         
-        this._user.getContacts();
     }
 
     loadElements(){
@@ -588,7 +595,16 @@ export default class  whatsappcontroller {
 
         this.el.btnSend.on("click", e=>{
 
-            console.log(this.el.inputText.innerText);
+            Message.send(
+                this._contactActive.chatId, 
+                this._user.email,
+                'text',
+                this.el.inputText.innerText
+            );
+
+            this.el.inputText.innerText = '';
+            this.el.panelEmojis.removeClass('open');
+
         });
 
         this.el.btnEmojis.on("click", e=>{
