@@ -638,56 +638,77 @@ export default class  whatsappcontroller {
 
             if (this.el.inputDocument.files.length) {
 
-                this._mediaPreviewMode = 'document';
+                let file = this.el.inputDocument.files[0];
+
+                if (file.type.startsWith('image/')) {
+                    this._mediaPreviewMode = 'image';
+                    this._imagePreviewFiles = [file];
+                } else {
+                    this._mediaPreviewMode = 'document';
+                }
 
                 this.el.panelDocumentPreview.css({
-                    "height":"1%"
+                    "height": "1%"
                 });
-
-                let file = this.el.inputDocument.files[0];
 
                 this._documentPreviewController = new DocumentPreviewController(file);
 
                 this._documentPreviewController.getPreviewData().then(result => {
 
                     this.el.imgPanelDocumentPreview.src = result.src;
-                    this.el.infoPanelDocumentPreview.innerHTML = result.info;
+
+                    if (file.type.startsWith('image/')) {
+                        this.el.infoPanelDocumentPreview.innerHTML = file.name;
+                    } else {
+                        this.el.infoPanelDocumentPreview.innerHTML = result.info;
+                    }
+
                     this.el.imagePanelDocumentPreview.show();
                     this.el.filePanelDocumentPreview.hide();
 
                     this.el.panelDocumentPreview.css({
-                        "height":"calc(100% - 120px)"
+                        "height": "calc(100% - 120px)"
                     });
 
                 }).catch(err => {
 
-                this.el.panelDocumentPreview.css({
-                    "height":"calc(100% - 120px)"
-                });
+                    this.el.panelDocumentPreview.css({
+                        "height": "calc(100% - 120px)"
+                    });
 
-                switch (file.type){
+                    switch (file.type) {
 
-                    case 'application/vnd.ms-excel':
-                    case 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet':
-                        this.el.iconPanelDocumentPreview.className = 'jcxhw icon-doc-xls';
-                    break;
+                        case 'image/jpeg':
+                        case 'image/jpg':
+                        case 'image/png':
+                        case 'image/gif':
+                        case 'image/webp':
+                            this.el.iconPanelDocumentPreview.className = 'jcxhw icon-doc-generic';
+                            break;
 
-                    case 'application/vnd.ms-powerpoint':
-                    case 'application/vnd.openxmlformats-officedocument.presentationml.presentation':
-                        this.el.iconPanelDocumentPreview.className = 'jcxhw icon-doc-ppt';
-                    break;
+                        case 'application/vnd.ms-excel':
+                        case 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet':
+                            this.el.iconPanelDocumentPreview.className = 'jcxhw icon-doc-xls';
+                            break;
 
-                    case 'application/msword':
-                    case 'application/vnd.openxmlformats-officedocument.wordprocessingml.document':
-                        this.el.iconPanelDocumentPreview.className = 'jcxhw icon-doc-doc';
-                    break;
-                    
-                    default:
+                        case 'application/vnd.ms-powerpoint':
+                        case 'application/vnd.openxmlformats-officedocument.presentationml.presentation':
+                            this.el.iconPanelDocumentPreview.className = 'jcxhw icon-doc-ppt';
+                            break;
 
-                        this.el.iconPanelDocumentPreview.className = 'jcxhw icon-doc-generic';
-                        break;
+                        case 'application/msword':
+                        case 'application/vnd.openxmlformats-officedocument.wordprocessingml.document':
+                            this.el.iconPanelDocumentPreview.className = 'jcxhw icon-doc-doc';
+                            break;
 
-                }
+                        case 'application/pdf':
+                            this.el.iconPanelDocumentPreview.className = 'jcxhw icon-doc-pdf';
+                            break;
+
+                        default:
+                            this.el.iconPanelDocumentPreview.className = 'jcxhw icon-doc-generic';
+                            break;
+                    }
 
                     this.el.filenamePanelDocumentPreview.innerHTML = file.name;
                     this.el.imagePanelDocumentPreview.hide();
@@ -781,9 +802,10 @@ export default class  whatsappcontroller {
 
             this._microphoneController = new MicrophoneController();
 
-            this._microphoneController.on("ready", musica=>{
+            this._microphoneController.on("ready", stream=>{
 
                 this._microphoneController.startRecorder();
+
             });
 
             this._microphoneController.on("recordtimer", timer =>{
@@ -793,21 +815,45 @@ export default class  whatsappcontroller {
 
                     seconds = seconds % 60;
 
-                this.el.recordMicrophoneTimer.innerHTML = 
-                `${minutes}:${seconds.toString().padStart(2, "0")}`;
+                    this.el.recordMicrophoneTimer.innerHTML =
+                        `${minutes}:${seconds.toString().padStart(2, "0")}`;
+
+                });
+
             });
-        });
 
-        this.el.btnCancelMicrophone.on("click", e=>{
+            this.el.btnCancelMicrophone.on("click", e=>{
+
+                if (this._microphoneController) {
+
+                    this._microphoneController.stopRecorder();
+
+                }
+
+                this.closeRecordMicrophone();
+
+            });
+
+            this.el.btnFinishMicrophone.on("click", e=>{
+
+                if (!this._microphoneController) return;
+
+            this._microphoneController.on('recorded', (file, metadata)=>{
+
+                Message.sendAudio(
+                    this._contactActive.chatId,
+                    this._user.email,
+                    file,
+                    metadata,
+                    this._user.photo
+                ).catch(err => this.showMediaSendError(err));
+
+                this.closeRecordMicrophone();
+
+            });
 
             this._microphoneController.stopRecorder();
-            this.closeRecordMicrophone();
-        });
 
-        this.el.btnFinishMicrophone.on("click", e=>{
-
-            this._microphoneController.stopRecorder();
-            this.closeRecordMicrophone();
         });
 
         this.el.inputText.on("keypress", e => {
@@ -897,10 +943,31 @@ export default class  whatsappcontroller {
 
     }
 
-    closeRecordMicrophone(){
+    startRecordMicrophoneTime() {
+
+        this._microphoneController = new MicrophoneController();
+
+        this._microphoneController.on('ready', event => {
+
+            this._microphoneController.startRecorder();
+
+        });
+
+        this._microphoneController.on('timer', (data, event) => {
+
+            this.el.recordMicrophoneTimer.innerHTML = data.displayTimer;
+
+        });
+
+    }
+
+    closeRecordMicrophone() {
+
+        this._microphoneController.stopRecorder();
 
         this.el.recordMicrophone.hide();
         this.el.btnSendMicrophone.show();
+
     }
 
     showMediaSendError(err){

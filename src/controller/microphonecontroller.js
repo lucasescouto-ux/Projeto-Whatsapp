@@ -7,8 +7,10 @@ export class MicrophoneController extends ClassEvent {
         super();
 
         this._mimeType = "audio/webm";
-
         this._available = false;
+        this._recordedChunks = [];
+        this._stream = null;
+        this._mediaRecorder = null;
 
         navigator.mediaDevices.getUserMedia({
             audio: true
@@ -20,7 +22,9 @@ export class MicrophoneController extends ClassEvent {
             this.trigger("ready", this._stream);
 
         }).catch(err => {
-            console.error("Erro ao acessar câmera:", err);
+
+            console.error("Erro ao acessar microfone:", err);
+
         });
     }
 
@@ -29,57 +33,61 @@ export class MicrophoneController extends ClassEvent {
         return this._available;
     }
 
-    stop(){
-
-        this._stream.getTracks().forEach(tracks=>{
-
-                tracks.stop();
-            });
-    }
-
     startRecorder(){
 
         if(this.isAvailable()){
 
             this._mediaRecorder = new MediaRecorder(this._stream, {
-
                 mimeType: this._mimeType
             });
-        
+
             this._recordedChunks = [];
 
-            this._mediaRecorder.addEventListener("dataavailable", e=>{
+            this._mediaRecorder.addEventListener("dataavailable", e => {
 
                 if(e.data.size > 0) this._recordedChunks.push(e.data);
+
             });
 
-            this._mediaRecorder.addEventListener("stop", e=>{
+            this._mediaRecorder.addEventListener("stop", e => {
 
                 let blob = new Blob(this._recordedChunks, {
                     type: this._mimeType
                 });
 
-                let fileName = `rec${Date.now()}.webm`;
+                let filename = `rec${Date.now()}.webm`;
 
-                let file = new File([blob], fileName, {
-                    type: this._mimeType,
-                    lastModified: Date.now()
-                });
-
-                console.log("file", file);
-
+                let audioContext = new AudioContext();
                 let reader = new FileReader();
 
                 reader.onload = e => {
 
-                    console.log("reader file", file);
+                    audioContext.decodeAudioData(reader.result).then(decode => {
 
-                    let audio = new Audio(reader.result);
+                        let file = new File([blob], filename, {
+                            type: this._mimeType,
+                            lastModified: Date.now()
+                        });
 
-                    audio.play();
-                }
+                        this.trigger("recorded", file, decode);
 
-                reader.readAsDataURL(file);
+                    }).catch(err => {
+
+                        let file = new File([blob], filename, {
+                            type: this._mimeType,
+                            lastModified: Date.now()
+                        });
+
+                        this.trigger("recorded", file, {
+                            duration: 0
+                        });
+
+                    });
+
+                };
+
+                reader.readAsArrayBuffer(blob);
+
             });
 
             this._mediaRecorder.start();
@@ -92,9 +100,29 @@ export class MicrophoneController extends ClassEvent {
 
         if(this.isAvailable()){
 
-            this._mediaRecorder.stop();
+            if(this._mediaRecorder && this._mediaRecorder.state !== "inactive"){
+
+                this._mediaRecorder.stop();
+
+            }
+
             this.stop();
             this.stopTimer();
+        }
+
+    }
+
+    stop(){
+
+        if(this._stream){
+
+            this._stream.getTracks().forEach(track => {
+
+                track.stop();
+
+            });
+
+            this._available = false;
         }
 
     }
@@ -105,7 +133,7 @@ export class MicrophoneController extends ClassEvent {
 
         this._recordMicrophoneInterval = setInterval(() => {
 
-            this.trigger("recordtimer", (Date.now() - start));
+            this.trigger("recordtimer", Date.now() - start);
 
         }, 100);
 
@@ -114,5 +142,6 @@ export class MicrophoneController extends ClassEvent {
     stopTimer(){
 
         clearInterval(this._recordMicrophoneInterval);
+
     }
 }
