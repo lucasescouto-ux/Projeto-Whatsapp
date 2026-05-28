@@ -155,27 +155,53 @@ export default class  whatsappcontroller {
 
     setActiveChat(contact){
 
+        if (this._contactActive){
+
+            Message.getRef(this._contactActive.chatId).onSnapshot(()=>{});
+        }
+
         this._contactActive = contact;
 
         this.el.activeName.innerHTML = contact.name;
-                    this.el.activeStatus.innerHTML = contact.status || '';
+        this.el.activeStatus.innerHTML = contact.status || '';
 
-                    if(contact.photo){
+        if(contact.photo){
 
-                        this.el.activePhoto.src = contact.photo;
+            this.el.activePhoto.src = contact.photo;
 
-                        this.el.activePhoto.show();
+            this.el.activePhoto.show();
 
-                    } else {
+        } else {
 
-                        this.el.activePhoto.hide();
-                    }
+            this.el.activePhoto.hide();
+        }
 
-                    this.el.home.hide();
+        this.el.home.hide();
 
-                    this.el.main.css({
-                        display:'flex'
-                    });
+        this.el.main.css({
+            display:'flex'
+        });
+
+        Message.getRef(contact.chatId)
+        .orderBy('timeStamp')
+        .onSnapshot(docs => {
+
+            this.el.panelMessagesContainer.innerHTML = '';
+
+            docs.forEach(doc => {
+                let data = doc.data();
+                data.id = doc.id;
+
+                if (!document.getElementById(data.id)){
+
+                    let message = new Message();
+                    message.fromJSON(data);
+                    let me = data.from === this._user.email;
+                    let view = message.getViewElemente(me);
+                    this.el.panelMessagesContainer.appendChild(view);
+                }
+            });
+        });
     }
 
     loadElements(){
@@ -599,7 +625,7 @@ export default class  whatsappcontroller {
                 this._contactActive.chatId, 
                 this._user.email,
                 'text',
-                this.el.inputText.innerText
+                this.el.inputText.innerHTML
             );
 
             this.el.inputText.innerText = '';
