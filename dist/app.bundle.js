@@ -3976,7 +3976,9 @@ class  whatsappcontroller {
 
         this.elementsPrototype();
         this.loadElements();
+        this._lastContactMessageTimes = {};
         this.initEvents();
+        this.initNotifications();
 
         this._firebase = new __WEBPACK_IMPORTED_MODULE_4__utils_firebase__["a" /* Firebase */]();
         this._contactUserUnsubscribes = {};
@@ -4032,6 +4034,8 @@ class  whatsappcontroller {
                     this.el.appContent.css({
                         display: 'flex'
                     });
+
+                    this.initPresence();
                 }).catch(err => {
 
                     console.error(err);
@@ -4041,6 +4045,250 @@ class  whatsappcontroller {
             
             console.error(err);
         });
+    }
+
+    initPresence() {
+
+        if (this._presenceInitialized || !this._user || !this._user.email) return;
+
+        this._presenceInitialized = true;
+
+        this.updateMyPresence(true);
+
+        window.addEventListener('focus', e => {
+            this.updateMyPresence(true);
+        });
+
+        document.addEventListener('visibilitychange', e => {
+            this.updateMyPresence(!document.hidden);
+        });
+
+        window.addEventListener('beforeunload', e => {
+            this.updateMyPresence(false);
+        });
+
+        window.addEventListener('pagehide', e => {
+            this.updateMyPresence(false);
+        });
+    }
+
+    updateMyPresence(online) {
+
+        if (!this._user || !this._user.email) return;
+
+        this._user.online = online;
+        this._user.lastSeen = new Date();
+
+        __WEBPACK_IMPORTED_MODULE_5__model_user__["a" /* User */].findbyEmail(this._user.email).set({
+            online,
+            lastSeen: this._user.lastSeen
+        }, {
+            merge: true
+        }).catch(err => console.error(err));
+    }
+
+    initNotifications() {
+
+        this._notificationsSupported = 'Notification' in window;
+
+        if (!this.el.alertNotificationPermission) return;
+
+        this.el.alertNotificationPermission.on('click', e => {
+
+            this.requestNotificationPermission();
+        });
+
+        this.updateNotificationPermissionAlert();
+    }
+
+    updateNotificationPermissionAlert() {
+
+        if (!this.el.alertNotificationPermission) return;
+
+        if (this._notificationsSupported && Notification.permission === 'default') {
+            this.el.alertNotificationPermission.show();
+        } else {
+            this.el.alertNotificationPermission.hide();
+        }
+    }
+
+    requestNotificationPermission() {
+
+        if (!this._notificationsSupported) {
+            alert('Este navegador nÃ£o suporta notificaÃ§Ãµes na Ã¡rea de trabalho.');
+            return Promise.resolve('unsupported');
+        }
+
+        return Notification.requestPermission().then(permission => {
+
+            this.updateNotificationPermissionAlert();
+
+            if (permission === 'granted') {
+                this.showDesktopNotification({
+                    name: 'WhatsApp Clone',
+                    lastMessage: 'NotificaÃ§Ãµes ativadas.'
+                }, {
+                    tag: 'notifications-enabled',
+                    autoClose: 4000
+                });
+            }
+
+            return permission;
+        }).catch(err => {
+
+            console.error(err);
+            return 'denied';
+        });
+    }
+
+    getContactMessageTime(contact) {
+
+        if (!contact || !contact.lastMessageTime) return 0;
+
+        if (typeof contact.lastMessageTime.toMillis === 'function') {
+            return contact.lastMessageTime.toMillis();
+        }
+
+        if (typeof contact.lastMessageTime.toDate === 'function') {
+            return contact.lastMessageTime.toDate().getTime();
+        }
+
+        if (contact.lastMessageTime instanceof Date) {
+            return contact.lastMessageTime.getTime();
+        }
+
+        return Number(contact.lastMessageTime) || 0;
+    }
+
+    stripNotificationText(text) {
+
+        return this.getSidebarLastMessageText(text) || 'Nova mensagem';
+    }
+
+    handleContactNotification(contact) {
+
+        if (!contact || !contact.email) return;
+
+        let lastMessageTime = this.getContactMessageTime(contact);
+        let previousTime = this._lastContactMessageTimes[contact.email];
+
+        if (!lastMessageTime) {
+            if (previousTime === undefined) {
+                this._lastContactMessageTimes[contact.email] = 0;
+            }
+
+            return;
+        }
+
+        this._lastContactMessageTimes[contact.email] = lastMessageTime;
+
+        if (previousTime === undefined || lastMessageTime <= previousTime) return;
+        if (contact.lastMessageFrom && contact.lastMessageFrom === this._user.email) return;
+
+        this.showDesktopNotification(contact, {
+            tag: `chat-${contact.email}`
+        });
+    }
+
+    showDesktopNotification(contact, options = {}) {
+
+        if (!this._notificationsSupported || Notification.permission !== 'granted') return;
+
+        let notification = new Notification(contact.name || contact.email || 'Nova mensagem', {
+            body: this.stripNotificationText(contact.lastMessage),
+            icon: contact.photo || 'img/HcodeWhatsAppClone.png',
+            tag: options.tag || `chat-${contact.email || 'default'}`,
+            renotify: true
+        });
+
+        notification.onclick = e => {
+
+            window.focus();
+
+            if (contact.email) {
+                let contactItem = this.el.contactsMessagesList.querySelector(
+                    `.contact-item[data-email="${contact.email}"]`
+                );
+
+                if (contactItem) contactItem.click();
+            }
+
+            notification.close();
+        };
+
+        setTimeout(() => notification.close(), options.autoClose || 8000);
+    }
+
+    getDateValue(value) {
+
+        if (!value) return null;
+
+        if (typeof value.toDate === 'function') return value.toDate();
+        if (value instanceof Date) return value;
+
+        let date = new Date(value);
+
+        return Number.isNaN(date.getTime()) ? null : date;
+    }
+
+    formatContactPresence(contact) {
+
+        if (!contact) return '';
+        if (contact.online) return 'online';
+
+        let lastSeen = this.getDateValue(contact.lastSeen);
+
+        if (lastSeen) {
+            return `visto por \u00faltimo \u00e0s ${__WEBPACK_IMPORTED_MODULE_0__utils_format__["a" /* format */].dateToTime(lastSeen)}`;
+        }
+
+        return contact.status || '';
+    }
+
+    valuesAreEqual(value1, value2) {
+
+        let date1 = this.getDateValue(value1);
+        let date2 = this.getDateValue(value2);
+
+        if (date1 || date2) {
+            return Boolean(date1 && date2 && date1.getTime() === date2.getTime());
+        }
+
+        return value1 === value2;
+    }
+
+    escapeHTML(text) {
+
+        let div = document.createElement('div');
+        div.textContent = text || '';
+
+        return div.innerHTML;
+    }
+
+    getSidebarLastMessageText(message) {
+
+        if (!message) return '';
+
+        let div = document.createElement('div');
+        div.innerHTML = message;
+
+        div.querySelectorAll('img, .emoji, .emojik').forEach(emoji => {
+
+            let unicode = emoji.getAttribute('alt') || emoji.dataset.unicode || emoji.textContent || '';
+            emoji.parentNode.replaceChild(document.createTextNode(unicode), emoji);
+        });
+
+        return (div.textContent || div.innerText || message).trim();
+    }
+
+    getSidebarLastMessageHTML(message) {
+
+        return this.escapeHTML(this.getSidebarLastMessageText(message));
+    }
+
+    getLastMessageStatusClass(contact) {
+
+        return contact && contact.lastMessageStatus === 'read' ? 'read' : '';
     }
 
     initContacts(){
@@ -4061,6 +4309,7 @@ class  whatsappcontroller {
                 renderedEmails[contact.email] = true;
                 this._contactsByEmail[contact.email] = contact;
                 this.watchContactProfile(contact);
+                this.handleContactNotification(contact);
 
                 let div = document.createElement('div');
 
@@ -4099,14 +4348,14 @@ class  whatsappcontroller {
                             <span title="digitando…" class="vdXUe _1wjpf typing" style="display:none">digitando…</span>
 
                             <span class="_2_LEW last-message">
-                                <div class="_1VfKB">
+                                <div class="_1VfKB last-message-status ${this.getLastMessageStatusClass(contact)}">
                                     <span data-icon="status-dblcheck" class="">
                                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 18 18" width="18" height="18">
                                             <path fill="#263238" fill-opacity=".4" d="M17.394 5.035l-.57-.444a.434.434 0 0 0-.609.076l-6.39 8.198a.38.38 0 0 1-.577.039l-.427-.388a.381.381 0 0 0-.578.038l-.451.576a.497.497 0 0 0 .043.645l1.575 1.51a.38.38 0 0 0 .577-.039l7.483-9.602a.436.436 0 0 0-.076-.609zm-4.892 0l-.57-.444a.434.434 0 0 0-.609.076l-6.39 8.198a.38.38 0 0 1-.577.039l-2.614-2.556a.435.435 0 0 0-.614.007l-.505.516a.435.435 0 0 0 .007.614l3.887 3.8a.38.38 0 0 0 .577-.039l7.483-9.602a.435.435 0 0 0-.075-.609z"></path>
                                         </svg>
                                     </span>
                                 </div>
-                                <span dir="ltr" class="_1wjpf _3NFp9">${contact.lastMessage || ''}</span>
+                                <span dir="ltr" class="_1wjpf _3NFp9">${this.getSidebarLastMessageHTML(contact.lastMessage || '')}</span>
                                 <div class="_3Bxar">
                                     <span>
                                         <div class="_15G96">
@@ -4160,9 +4409,9 @@ class  whatsappcontroller {
             let currentContact = this._contactsByEmail[contact.email] || contact;
             let updates = {};
 
-            ['name', 'photo', 'status'].forEach(field => {
+            ['name', 'photo', 'status', 'online', 'lastSeen'].forEach(field => {
 
-                if (profile[field] !== undefined && profile[field] !== currentContact[field]) {
+                if (profile[field] !== undefined && !this.valuesAreEqual(profile[field], currentContact[field])) {
                     updates[field] = profile[field];
                 }
             });
@@ -4187,6 +4436,8 @@ class  whatsappcontroller {
         if (item) {
             let name = item.querySelector('._25Ooe ._1wjpf');
             let photo = item.querySelector('.photo');
+            let status = item.querySelector('.last-message-status');
+            let lastMessage = item.querySelector('.last-message ._3NFp9');
 
             if (name) {
                 name.innerHTML = contact.name || '';
@@ -4202,12 +4453,25 @@ class  whatsappcontroller {
                     photo.hide();
                 }
             }
+
+            if (status) {
+                if (contact.lastMessageStatus === 'read') {
+                    status.addClass('read');
+                } else {
+                    status.removeClass('read');
+                }
+            }
+
+            if (lastMessage) {
+                lastMessage.innerHTML = this.getSidebarLastMessageHTML(contact.lastMessage || '');
+            }
         }
 
         if (this._contactActive && this._contactActive.email === contact.email) {
             Object.assign(this._contactActive, contact);
             this.el.activeName.innerHTML = contact.name || '';
-            this.el.activeStatus.innerHTML = contact.status || '';
+            this.el.activeStatus.innerHTML = this.formatContactPresence(contact);
+            this.el.activeStatus.title = this.formatContactPresence(contact);
 
             if (contact.photo) {
                 this.el.activePhoto.src = contact.photo;
@@ -4229,7 +4493,8 @@ class  whatsappcontroller {
             this._forceScrollMessagesToBottom = true;
 
             this.el.activeName.innerHTML = contact.name;
-            this.el.activeStatus.innerHTML = contact.status || '';
+            this.el.activeStatus.innerHTML = this.formatContactPresence(contact);
+            this.el.activeStatus.title = this.formatContactPresence(contact);
 
             if (contact.photo) {
                 this.el.activePhoto.src = contact.photo;
@@ -4278,7 +4543,21 @@ class  whatsappcontroller {
                         status: 'read'
                     }, {
                         merge: true
+                    }).then(() => {
+                        return __WEBPACK_IMPORTED_MODULE_5__model_user__["a" /* User */].getContactsRef(data.from)
+                            .doc(btoa(this._user.email))
+                            .set({
+                                lastMessageStatus: 'read'
+                            }, {
+                                merge: true
+                            });
+                    }).catch(err => {
+                        console.error(err);
                     });
+                }
+
+                if (me && data.status === 'read') {
+                    this.updateLastMessageStatus(this._contactActive, 'read');
                 }
 
                 if (message.type === 'contact') {
@@ -4489,16 +4768,34 @@ class  whatsappcontroller {
 
         this._user.updateContact(contact.email, {
             lastMessage: text,
-            lastMessageTime: now
+            lastMessageTime: now,
+            lastMessageFrom: this._user.email,
+            lastMessageStatus: 'sent'
         }).catch(err => console.error(err));
 
         __WEBPACK_IMPORTED_MODULE_5__model_user__["a" /* User */].getContactsRef(contact.email)
             .doc(btoa(this._user.email))
             .set({
             lastMessage: text,
-            lastMessageTime: now
+            lastMessageTime: now,
+            lastMessageFrom: this._user.email,
+            lastMessageStatus: 'sent'
             }, { merge: true })
             .catch(err => console.error(err));
+    }
+
+    updateLastMessageStatus(contact, status) {
+
+        if (!contact || !contact.email) return;
+        if (contact.lastMessageStatus === status) return;
+
+        contact.lastMessageStatus = status;
+
+        this._user.updateContact(contact.email, {
+            lastMessageStatus: status
+        }).catch(err => console.error(err));
+
+        this.updateRenderedContactProfile(contact);
     }
 
     openAttachmentPreviewPanel() {
@@ -4684,6 +4981,7 @@ class  whatsappcontroller {
             this._user.save().then(()=>{
 
                 this.el.btnSavePanelEditProfile.disabled = false;
+                this.el.btnClosePanelEditProfile.click();
             });
         });
 
@@ -4906,10 +5204,6 @@ class  whatsappcontroller {
                 } else {
                     this._mediaPreviewMode = 'document';
                 }
-
-                this.el.panelDocumentPreview.css({
-                    "height": "1%"
-                });
 
                 this._documentPreviewController = new __WEBPACK_IMPORTED_MODULE_3__documentpreviewcontroller__["a" /* DocumentPreviewController */](file);
 
@@ -43080,6 +43374,15 @@ class User extends __WEBPACK_IMPORTED_MODULE_1__model__["a" /* Model */] {
 
     get photo(){ return this._data.photo; }
     set photo(value){ this._data.photo = value; }
+
+    get status(){ return this._data.status; }
+    set status(value){ this._data.status = value; }
+
+    get online(){ return this._data.online; }
+    set online(value){ this._data.online = value; }
+
+    get lastSeen(){ return this._data.lastSeen; }
+    set lastSeen(value){ this._data.lastSeen = value; }
 
     get chatId(){ return this._data.chatId; }
     set chatId(value){ this._data.chatId = value; }

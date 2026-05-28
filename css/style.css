@@ -16153,6 +16153,32 @@ html[dir=rtl] ._2ICcy:after{
     text-align: center;
 }
 
+#alert-notification-permission {
+    cursor: pointer;
+}
+
+.last-message-status.read svg path {
+    fill: #4FC3F7;
+    fill-opacity: 1;
+}
+
+.last-message ._3NFp9 {
+    display: inline-flex;
+    align-items: center;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.last-message .emoji,
+.last-message .emojik,
+.last-message img {
+    width: 18px;
+    height: 18px;
+    vertical-align: -4px;
+}
+
 #image-panel-document-preview ._2-_Pl {
     display: flex;
     align-items: center;

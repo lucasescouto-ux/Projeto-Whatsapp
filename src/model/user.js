@@ -21,6 +21,15 @@ export class User extends Model {
     get photo(){ return this._data.photo; }
     set photo(value){ this._data.photo = value; }
 
+    get status(){ return this._data.status; }
+    set status(value){ this._data.status = value; }
+
+    get online(){ return this._data.online; }
+    set online(value){ this._data.online = value; }
+
+    get lastSeen(){ return this._data.lastSeen; }
+    set lastSeen(value){ this._data.lastSeen = value; }
+
     get chatId(){ return this._data.chatId; }
     set chatId(value){ this._data.chatId = value; }
 
