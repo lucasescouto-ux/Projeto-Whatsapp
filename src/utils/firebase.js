@@ -1,6 +1,7 @@
 const firebase = require("firebase/app");
 require("firebase/firestore");
 require("firebase/auth");
+require("firebase/storage");
 
 export class Firebase {
     constructor() {
@@ -28,6 +29,10 @@ export class Firebase {
 
     static db() {
         return firebase.firestore();
+    }
+
+    static storage() {
+        return firebase.storage();
     }
 
     initAuth() {

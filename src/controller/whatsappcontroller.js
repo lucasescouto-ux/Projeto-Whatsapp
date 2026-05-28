@@ -8,6 +8,7 @@ import { Chat } from '../model/chat';
 import { Message } from '../model/message'
 import { Base64 } from '../utils/base64';
 import { ContactsController } from './contactscontroller';
+import { Upload } from '../utils/upload';
 
 export default class  whatsappcontroller {
 
@@ -402,6 +403,27 @@ export default class  whatsappcontroller {
         this.el.photoContainerEditProfile.on("click", e=>{
 
             this.el.inputProfilePhoto.click();
+        });
+
+        this.el.inputProfilePhoto.on("change", e => {
+
+            if (this.el.inputProfilePhoto.files.length > 0) {
+
+                let file = this.el.inputProfilePhoto.files[0];
+
+                Base64.imageToDataURL(file).then(dataURL => {
+
+                    this._user.photo = dataURL;
+
+                    this._user.save().then(() => {
+                        this.el.btnClosePanelEditProfile.click();
+                    });
+
+                }).catch(err => {
+                    console.error(err);
+                    alert("Não foi possível carregar a foto.");
+                });
+            }
         });
 
         this.el.inputNamePanelEditProfile.on("keypress", e=>{
