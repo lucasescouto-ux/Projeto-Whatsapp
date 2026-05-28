@@ -82,6 +82,8 @@ export default class  whatsappcontroller {
                 let div = document.createElement('div');
 
                 div.className = 'contact-item';
+                div.dataset.email = contact.email;
+                div.dataset.chatId = contact.chatId;
 
                 div.innerHTML = `
         
@@ -155,48 +157,52 @@ export default class  whatsappcontroller {
         this._user.getContacts();
     }
 
-    setActiveChat(contact){
+    setActiveChat(contact) {
 
-        if (this._contactActive){
+            if (this._messagesUnsubscribe) {
+                this._messagesUnsubscribe();
+                this._messagesUnsubscribe = null;
+            }
 
-            Message.getRef(this._contactActive.chatId).onSnapshot(()=>{});
-        }
+            this._contactActive = contact;
 
-        this._contactActive = contact;
+            this.el.activeName.innerHTML = contact.name;
+            this.el.activeStatus.innerHTML = contact.status || '';
 
-        this.el.activeName.innerHTML = contact.name;
-        this.el.activeStatus.innerHTML = contact.status || '';
+            if (contact.photo) {
+                this.el.activePhoto.src = contact.photo;
+                this.el.activePhoto.show();
+            } else {
+                this.el.activePhoto.hide();
+            }
 
-        if(contact.photo){
+            this.el.home.hide();
 
-            this.el.activePhoto.src = contact.photo;
+            this.el.main.css({
+                display: 'flex'
+            });
 
-            this.el.activePhoto.show();
+            const activeChatId = contact.chatId;
 
-        } else {
+            this._messagesUnsubscribe = Message.getRef(activeChatId)
+                .orderBy('timeStamp')
+                .onSnapshot(docs => {
 
-            this.el.activePhoto.hide();
-        }
-
-        this.el.home.hide();
-
-        this.el.main.css({
-            display:'flex'
-        });
-
-        this.el.panelMessagesContainer.innerHTML = '';
-
-        Message.getRef(contact.chatId)
-        .orderBy('timeStamp')
-        .onSnapshot(docs => {
+            if (!this._contactActive || this._contactActive.chatId !== activeChatId) {
+                return;
+            }
 
             let scrollTop = this.el.panelMessagesContainer.scrollTop;
-            let scrollTopMax = 
-            (this.el.panelMessagesContainer.scrollHeight - 
-            this.el.panelMessagesContainer.offsetHeight);
-            let autoScroll = (scrollTop >= scrollTopMax);
+            let scrollTopMax =
+                this.el.panelMessagesContainer.scrollHeight -
+                this.el.panelMessagesContainer.offsetHeight;
+
+            let autoScroll = scrollTop >= scrollTopMax;
+
+            this.el.panelMessagesContainer.innerHTML = '';
 
             docs.forEach(doc => {
+
                 let data = doc.data();
                 data.id = doc.id;
 
@@ -207,39 +213,54 @@ export default class  whatsappcontroller {
 
                 let me = data.from === this._user.email;
 
-                if (!document.getElementById(data.id)){
+                let view = message.getViewElemente(me);
 
-                    if(!me){
+                if (!me && data.status !== 'read') {
+                    doc.ref.set({
+                        status: 'read'
+                    }, {
+                        merge: true
+                    });
+                }
 
-                        doc.ref.set({
+                if (message.type === 'contact') {
 
-                            status: 'read'
-                        }, {
-                            merge: true
-                        });
+                let btn = view.querySelector('.btn-message-send');
+
+                if (btn) {
+                    btn.on('click', e => {
+
+                        e.preventDefault();
+                        e.stopPropagation();
+
+                        let email = message.content.email;
+
+                        let contactItem = this.el.contactsMessagesList.querySelector(
+                            `.contact-item[data-email="${email}"]`
+                        );
+
+                        if (contactItem) {
+                            contactItem.click();
+                            return;
+                        }
+
+                        console.error('Contato não encontrado na lista:', email);
+                    });
                     }
 
-                    let view = message.getViewElemente(me);
+                }
+
                     this.el.panelMessagesContainer.appendChild(view);
+                });
 
-                } else if(me) {
-
-                    let msgEl = document.getElementById(data.id);
-
-                    msgEl.querySelector('.message-status').innerHTML = message.getStatusViewElement().outerHTML;
+                if (autoScroll) {
+                    this.el.panelMessagesContainer.scrollTop =
+                        this.el.panelMessagesContainer.scrollHeight -
+                        this.el.panelMessagesContainer.offsetHeight;
+                } else {
+                    this.el.panelMessagesContainer.scrollTop = scrollTop;
                 }
             });
-
-            if (autoScroll){
-
-                this.el.panelMessagesContainer.scrollTop =
-                (this.el.panelMessagesContainer.scrollHeight -
-                this.el.panelMessagesContainer.offsetHeight);
-            } else {
-
-                this.el.panelMessagesContainer.scrollTop = scrollTop;
-            }
-        });
     }
 
     loadElements(){
