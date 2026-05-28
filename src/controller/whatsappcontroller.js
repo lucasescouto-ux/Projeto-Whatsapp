@@ -198,13 +198,31 @@ export default class  whatsappcontroller {
                 let data = doc.data();
                 data.id = doc.id;
 
+                let message = new Message();
+                message.fromJSON(data);
+
+                let me = data.from === this._user.email;
+
                 if (!document.getElementById(data.id)){
 
-                    let message = new Message();
-                    message.fromJSON(data);
-                    let me = data.from === this._user.email;
+                    if(!me){
+
+                        doc.ref.set({
+
+                            status: 'read'
+                        }, {
+                            merge: true
+                        });
+                    }
+
                     let view = message.getViewElemente(me);
                     this.el.panelMessagesContainer.appendChild(view);
+
+                } else if(me) {
+
+                    let msgEl = document.getElementById(data.id);
+
+                    msgEl.querySelector('.message-status').innerHTML = message.getStatusViewElement().outerHTML;
                 }
             });
 
