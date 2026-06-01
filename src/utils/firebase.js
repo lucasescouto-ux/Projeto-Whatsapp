@@ -4,18 +4,18 @@ require("firebase/auth");
 require("firebase/storage");
 
 export class Firebase {
-    constructor() {
-        this._config = {
-            apiKey: "AIzaSyD--yKs3F53VYSkI2I9oRhYCAaqWjM0F1Q",
-            authDomain: "whatsapp-clone-78124.firebaseapp.com",
-            projectId: "whatsapp-clone-78124",
-            messagingSenderId: "589551792845",
-            appId: "1:589551792845:web:ea5dc143257f4b40e12f84",
-            measurementId: "G-H5GQJCDPH6"
-        };
+  constructor() {
+    this._config = {
+      apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+      authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+      projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+      messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+      appId: import.meta.env.VITE_FIREBASE_APP_ID,
+      measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID,
+    };
 
-        this.init();
-    }
+    this.init();
+  }
 
     init(){
 
